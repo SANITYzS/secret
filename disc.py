@@ -14,7 +14,7 @@ import socket
 from datetime import datetime
 
 import win32crypt
-from Cryptodome.Cipher import AES
+from Crypto.Cipher import AES
 
 import discord
 from discord.ext import commands
